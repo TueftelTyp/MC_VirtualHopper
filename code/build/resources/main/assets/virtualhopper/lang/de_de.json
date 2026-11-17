@@ -30,5 +30,17 @@
   "screen.virtualhopper.recipe.saved": "Gespeichert! Welt neu starten.",
   "screen.virtualhopper.recipe.error": "Speichern fehlgeschlagen; siehe Log",
   "screen.virtualhopper.recipe.invalid": "Ungültige Item-ID",
-  "screen.virtualhopper.recipe.singleplayer": "Nur im Einzelspieler änderbar"
+  "screen.virtualhopper.recipe.singleplayer": "Nur im Einzelspieler änderbar",
+  "screen.virtualhopper.general.title": "Virtual Hopper - Einstellungen",
+  "screen.virtualhopper.general.tab": "Allgemein",
+  "screen.virtualhopper.recipe.tab": "Rezept",
+  "screen.virtualhopper.general.interval": "Transferintervall (Ticks)",
+  "screen.virtualhopper.general.cross_dimension": "Dimensionsübergreifend senden",
+  "screen.virtualhopper.general.collect_items": "Gedroppte Items einsammeln",
+  "screen.virtualhopper.general.range": "Transferintervall: 1 bis 1200 Ticks",
+  "screen.virtualhopper.general.save": "Einstellungen speichern",
+  "screen.virtualhopper.general.saved": "Gespeichert und sofort aktiv.",
+  "screen.virtualhopper.general.failed": "Speichern fehlgeschlagen (siehe Log).",
+  "screen.virtualhopper.general.invalid": "Ungueltig: 1 bis 1200 eingeben.",
+  "screen.virtualhopper.general.remote": "Auf Servern nur serverseitig aenderbar."
 }

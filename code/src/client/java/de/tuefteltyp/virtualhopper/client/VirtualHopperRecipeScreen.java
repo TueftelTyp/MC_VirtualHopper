@@ -43,9 +43,12 @@ public final class VirtualHopperRecipeScreen extends Screen {
         }
         loadExisting();
         addRenderableWidget(Button.builder(Component.translatable("screen.virtualhopper.recipe.save"), b -> save())
-                .bounds(left, top + 144, 145, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> onClose())
-                .bounds(left + 157, top + 144, 145, 20).build());
+                .bounds(left, top + 144, 96, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.virtualhopper.general.tab"),
+                b -> minecraft.gui.setScreen(new VirtualHopperSettingsScreen(parent)))
+                .bounds(left + 101, top + 144, 101, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
+                .bounds(left + 207, top + 144, 95, 20).build());
     }
     private void loadExisting() {
         Minecraft mc = Minecraft.getInstance();

@@ -1,4 +1,4 @@
-# VirtualHopper v1.9 (Minecraft 26.3 Fabric)
+# VirtualHopper v1.10 (Minecraft 26.3 Fabric)
 
 Author: TueftelTyp
 
@@ -14,9 +14,22 @@ Previous v1.6 recipe: five ender pearls and one hopper (E E / EHE /  E ).
 
 ## Mod Menu settings
 
-Install **Mod Menu 21.0.1 for Minecraft 26.3** on the client. Open Mod Menu -> Virtual Hopper -> Configure. Change the nine Minecraft item identifiers (e.g. `minecraft:diamond_block`) and select **Save recipe**. Changes write a *world-specific datapack* at `saves/<world>/datapacks/virtualhopper_recipe`; leave and re-enter the world to activate it. This feature works in **singleplayer only**. On dedicated servers, the owner must manage the recipe datapack directly, since a client must not alter the server's recipe.
+Install **Mod Menu 21.0.1 for Minecraft 26.3** on the client. Open Mod Menu -> Virtual Hopper -> Configure -> Recipe. Change the nine Minecraft item identifiers (e.g. `minecraft:diamond_block`) and select **Save recipe**. Changes write a *world-specific datapack* at `saves/<world>/datapacks/virtualhopper_recipe`; leave and re-enter the world to activate it. This feature works in **singleplayer only**. On dedicated servers, the owner must manage the recipe datapack directly, since a client must not alter the server's recipe.
 
 The recipe editor currently requires nine non-empty ingredients. To create patterns with blank slots, use a datapack editor. Every slot accepts an item identifier, not a visual item-picker; typing nonexistent identifiers may create an unloadable recipe. The button does not silently promise instant reload.
+
+
+### General settings in Mod Menu (v1.10)
+
+Open **Mod Menu → Virtual Hopper → Configure → General**. The following options are editable without touching JSON files:
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| Transfer interval (ticks) | 8 | 1–1200 ticks between transfer attempts. |
+| Cross-dimension transfers | Enabled | Permit linked hoppers in different dimensions. |
+| Collect dropped items | Enabled | Pick up dropped item entities above the hopper. |
+
+Choose **Save settings** to write `config/virtualhopper.json`. In integrated singleplayer the values take effect immediately. At the main menu they are saved for the next game startup. On dedicated multiplayer servers, these settings belong to the **server**, so Mod Menu disables edits while connected to a remote server. Server operators must edit the server's `config/virtualhopper.json` and restart the server (or otherwise reload the configuration). The **Recipe** button opens the existing world-specific recipe editor.
 
 ## Unique names
 
@@ -41,6 +54,6 @@ Requires access to Fabric, Mojang and Terraformers Maven to download dependencie
 - The gameplay logic, recipe, and unique-name registry are unchanged from v1.7.
 - This source archive was not compiled against Minecraft/Fabric locally (Java 25 and Gradle dependencies unavailable here).
 
-## v1.9 UI cleanup
+## v1.9 UI cleanup (retained)
 
 Removed the redundant "Konfiguration" toggle button from the stand-alone hopper settings screen. Name, destination, and action buttons remain visible. The settings entry point in the regular hopper inventory and shift-right-click shortcut remain unchanged. No transfer or storage logic was changed.

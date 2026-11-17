@@ -7,6 +7,10 @@
   "authors": [
     "TueftelTyp"
   ],
+  "contact": {
+    "homepage": "https://github.com/TueftelTyp/MC_VirtualHopper",
+    "issues": "https://github.com/TueftelTyp/MC_VirtualHopper/issues"
+  },
   "license": "MIT",
   "environment": "*",
   "entrypoints": {

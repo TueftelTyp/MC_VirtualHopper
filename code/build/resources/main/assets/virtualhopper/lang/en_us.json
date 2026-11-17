@@ -30,5 +30,17 @@
   "screen.virtualhopper.recipe.saved": "Saved! Restart the world.",
   "screen.virtualhopper.recipe.error": "Could not save; see log",
   "screen.virtualhopper.recipe.invalid": "Invalid item ID",
-  "screen.virtualhopper.recipe.singleplayer": "Only editable in singleplayer"
+  "screen.virtualhopper.recipe.singleplayer": "Only editable in singleplayer",
+  "screen.virtualhopper.general.title": "Virtual Hopper - Settings",
+  "screen.virtualhopper.general.tab": "General",
+  "screen.virtualhopper.recipe.tab": "Recipe",
+  "screen.virtualhopper.general.interval": "Transfer interval (ticks)",
+  "screen.virtualhopper.general.cross_dimension": "Cross-dimension transfers",
+  "screen.virtualhopper.general.collect_items": "Collect dropped items",
+  "screen.virtualhopper.general.range": "Transfer interval: 1 to 1200 ticks",
+  "screen.virtualhopper.general.save": "Save settings",
+  "screen.virtualhopper.general.saved": "Saved and effective immediately.",
+  "screen.virtualhopper.general.failed": "Could not save (see log).",
+  "screen.virtualhopper.general.invalid": "Invalid: enter 1 through 1200.",
+  "screen.virtualhopper.general.remote": "Server settings must be changed on the server."
 }
