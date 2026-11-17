@@ -1,4 +1,4 @@
-# VirtualHopper v1.12
+# VirtualHopper v1.14
 
 Cross-dimensional target fix: destinations are resolved from the persistent name registry even if the target chunk is unloaded. When items are waiting, the mod loads the destination chunk to perform the transfer. This may add server load on large networks; chunks are not kept permanently forced-loaded. Existing names and links are preserved. Back up your world before upgrading.
 
@@ -60,12 +60,25 @@ Requires access to Fabric, Mojang and Terraformers Maven to download dependencie
 
 ## v1.9 UI cleanup (retained)
 
-Removed the redundant "Konfiguration" toggle button from the stand-alone hopper settings screen. Name, destination, and action buttons remain visible. The settings entry point in the regular hopper inventory remains available. The shift-right-click shortcut has been removed in v1.13. No transfer or storage logic was changed.
+Removed the redundant "Konfiguration" toggle button from the stand-alone hopper settings screen. Name, destination, and action buttons remain visible. The settings entry point in the regular hopper inventory remains available. The shift-right-click shortcut was removed in v1.13. No transfer or storage logic was changed.
 
 ## v1.12 visual adjustment
 
 Reduced Virtual Hopper item model size in first-person, third-person and when dropped on the ground. Also adjusted item frame and inventory presentation. Block appearance and gameplay are unchanged.
 
-## v1.13 changes
+## v1.14 changes
 
 The Shift + right-click configuration shortcut was removed. Use the Settings button in the Virtual Hopper inventory instead. Normal inventory shift-click item transfers are unaffected.
+
+## Independent item filters (v1.14)
+
+Use **Settings → Item filters** to configure two independent sets of nine ghost templates:
+
+- **Input filter**: controls items drawn from the container above, collected from the ground, and pushed into the hopper by other inventories. Insertion through the GUI is also restricted when this filter is enabled.
+- **Remote output filter**: controls which items are sent to a linked Virtual Hopper. It does not restrict the ordinary, unlinked hopper output.
+
+Each filter may be disabled, whitelisted, or blacklisted. A whitelist with no entries blocks all items in that direction; an empty blacklist allows all items. Only item types are compared, ignoring enchantments, custom names, and other item data. Items refused by the outgoing filter remain in the source hopper. Items refused by an input filter remain at the source. The destination's input filter also applies to remote deliveries.
+
+To configure the nine ghost template buttons, **hold an item in your main hand and click a filter slot**. Nothing is consumed. Click an empty hand to select a slot, then use **Clear selected slot** to remove its template. Filter settings are saved per hopper in the world and synchronized to nearby clients. Updating an already-opened GUI from another player's changes requires reopening it.
+
+The new server command is `/virtualhopper filter <x> <y> <z> <pickup|send> <enabled|mode|slot1..slot9> <on|off|whitelist|blacklist|item_id|none>`; the server validates position, distance, item identifiers, and values.

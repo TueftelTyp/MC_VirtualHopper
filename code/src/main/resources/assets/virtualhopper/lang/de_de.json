@@ -42,5 +42,21 @@
   "screen.virtualhopper.general.saved": "Gespeichert und sofort aktiv.",
   "screen.virtualhopper.general.failed": "Speichern fehlgeschlagen (siehe Log).",
   "screen.virtualhopper.general.invalid": "Ungueltig: 1 bis 1200 eingeben.",
-  "screen.virtualhopper.general.remote": "Auf Servern nur serverseitig aenderbar."
+  "screen.virtualhopper.general.remote": "Auf Servern nur serverseitig aenderbar.",
+  "screen.virtualhopper.filter.open": "Itemfilter",
+  "screen.virtualhopper.filter.title": "Virtueller Trichter - Itemfilter",
+  "screen.virtualhopper.filter.pickup": "Eingangsfilter",
+  "screen.virtualhopper.filter.send": "Fernversandfilter",
+  "screen.virtualhopper.filter.enable_on": "Filter: AN",
+  "screen.virtualhopper.filter.enable_off": "Filter: AUS",
+  "screen.virtualhopper.filter.whitelist": "Whitelist",
+  "screen.virtualhopper.filter.blacklist": "Blacklist",
+  "screen.virtualhopper.filter.help": "Item in die Haupthand nehmen, dann einen Slot anklicken.",
+  "screen.virtualhopper.filter.clear": "Slot leeren",
+  "screen.virtualhopper.filter.back": "Zurueck",
+  "screen.virtualhopper.filter.empty": "Leer",
+  "screen.virtualhopper.filter.noitem": "Erst ein Item in die Schnellleiste nehmen.",
+  "screen.virtualhopper.filter.saved": "Filteraenderung an Server gesendet.",
+  "screen.virtualhopper.filter.selected": "Ausgewaehlter Slot:",
+  "message.virtualhopper.filter.invalid": "Ungueltige Filtereinstellung oder Item-ID."
 }

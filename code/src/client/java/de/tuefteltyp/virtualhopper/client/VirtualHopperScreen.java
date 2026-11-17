@@ -62,6 +62,9 @@ public final class VirtualHopperScreen extends Screen {
             send("virtualhopper target " + coordinates() + " " + value);
             status = "screen.virtualhopper.sent";
         }).bounds(x + 119, y + 93, 105, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("screen.virtualhopper.filter.open"), b -> {
+            if (minecraft != null) minecraft.gui.setScreen(new VirtualHopperFilterScreen(pos));
+        }).bounds(x + 6, y + 173, 218, 20).build());
         list = addRenderableWidget(Button.builder(Component.translatable("screen.virtualhopper.list"), b -> {
             send("virtualhopper list");
             onClose();
@@ -83,7 +86,7 @@ public final class VirtualHopperScreen extends Screen {
     @Override public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         int x = width / 2 - panelWidth / 2;
         int y = height / 2 - 73;
-        int bottom = y + 165;
+        int bottom = y + 202;
         graphics.fill(x - 8, y - 8, x + panelWidth + 8, bottom, 0xEF0A1722);
         graphics.outline(x - 8, y - 8, panelWidth + 16, bottom - y + 8, 0xFF13D5E5);
         graphics.fill(x - 7, y - 7, x + panelWidth + 7, y - 4, 0xFF16DAE7);

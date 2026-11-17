@@ -1,6 +1,7 @@
 package de.tuefteltyp.virtualhopper;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -38,6 +39,14 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
     private String targetDimension = "";
     private long targetPosition = 0L;
     private boolean targetLocationKnown = false;
+    // Ghost filter templates: only registry IDs are stored, never real ItemStacks.
+    // Independent intake and remote-output configurations; legacy worlds default to disabled.
+    private boolean pickupFilterEnabled = false;
+    private boolean pickupFilterBlacklist = false;
+    private boolean sendFilterEnabled = false;
+    private boolean sendFilterBlacklist = false;
+    private final String[] pickupFilterItems = new String[9];
+    private final String[] sendFilterItems = new String[9];
     private int age = 0;
     private static final int[] ALL = {0,1,2,3,4};
 
@@ -111,6 +120,50 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
         for (ItemStack stack : items) if (!stack.isEmpty()) return true;
         return false;
     }
+    public boolean isFilterEnabled(boolean pickup) {
+        return pickup ? pickupFilterEnabled : sendFilterEnabled;
+    }
+    public boolean isFilterBlacklist(boolean pickup) {
+        return pickup ? pickupFilterBlacklist : sendFilterBlacklist;
+    }
+    public String getFilterItem(boolean pickup, int slot) {
+        if (slot < 0 || slot >= 9) return "";
+        String value = (pickup ? pickupFilterItems : sendFilterItems)[slot];
+        return value == null ? "" : value;
+    }
+    public void setFilterEnabled(boolean pickup, boolean enabled) {
+        if (pickup) pickupFilterEnabled = enabled; else sendFilterEnabled = enabled;
+        setChanged();
+    }
+    public void setFilterBlacklist(boolean pickup, boolean blacklist) {
+        if (pickup) pickupFilterBlacklist = blacklist; else sendFilterBlacklist = blacklist;
+        setChanged();
+    }
+    public boolean setFilterItem(boolean pickup, int slot, String id) {
+        if (slot < 0 || slot >= 9 || id == null) return false;
+        String[] slots = pickup ? pickupFilterItems : sendFilterItems;
+        if (!id.isEmpty()) {
+            try {
+                Identifier key = Identifier.parse(id);
+                if (BuiltInRegistries.ITEM.getOptional(key).isEmpty()
+                        || key.toString().equals("minecraft:air")) return false;
+            } catch (RuntimeException malformed) {
+                return false;
+            }
+        }
+        slots[slot] = id;
+        setChanged();
+        return true;
+    }
+    private boolean passesFilter(ItemStack stack, boolean pickup) {
+        if (stack.isEmpty()) return true;
+        String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        return ItemFilterRules.allows(itemId, isFilterEnabled(pickup), isFilterBlacklist(pickup),
+                pickup ? pickupFilterItems : sendFilterItems);
+    }
+    public boolean acceptsItem(ItemStack stack) { return passesFilter(stack, true); }
+    private boolean canSend(ItemStack stack) { return passesFilter(stack, false); }
+
     @Override public void setChanged() {
         super.setChanged();
         if (level != null && !level.isClientSide()) {
@@ -138,6 +191,14 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
         targetDimension = input.getStringOr("TargetDimension", "");
         targetPosition = input.getLongOr("TargetPosition", 0L);
         targetLocationKnown = input.getBooleanOr("TargetLocationKnown", false);
+        pickupFilterEnabled = input.getBooleanOr("PickupFilterEnabled", false);
+        pickupFilterBlacklist = input.getBooleanOr("PickupFilterBlacklist", false);
+        sendFilterEnabled = input.getBooleanOr("SendFilterEnabled", false);
+        sendFilterBlacklist = input.getBooleanOr("SendFilterBlacklist", false);
+        for (int i = 0; i < 9; i++) {
+            pickupFilterItems[i] = input.getStringOr("PickupFilterSlot" + i, "");
+            sendFilterItems[i] = input.getStringOr("SendFilterSlot" + i, "");
+        }
     }
     @Override protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
@@ -147,9 +208,19 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
         output.putString("TargetDimension", targetDimension);
         output.putLong("TargetPosition", targetPosition);
         output.putBoolean("TargetLocationKnown", targetLocationKnown);
+        output.putBoolean("PickupFilterEnabled", pickupFilterEnabled);
+        output.putBoolean("PickupFilterBlacklist", pickupFilterBlacklist);
+        output.putBoolean("SendFilterEnabled", sendFilterEnabled);
+        output.putBoolean("SendFilterBlacklist", sendFilterBlacklist);
+        for (int i = 0; i < 9; i++) {
+            output.putString("PickupFilterSlot" + i, getFilterItem(true, i));
+            output.putString("SendFilterSlot" + i, getFilterItem(false, i));
+        }
     }
     @Override public int[] getSlotsForFace(Direction side) { return ALL; }
-    @Override public boolean canPlaceItemThroughFace(int slot, ItemStack stack, Direction direction) { return true; }
+    // External hoppers and normal GUI placement respect the intake filter as well.
+    @Override public boolean canPlaceItem(int slot, ItemStack stack) { return acceptsItem(stack); }
+    @Override public boolean canPlaceItemThroughFace(int slot, ItemStack stack, Direction direction) { return acceptsItem(stack); }
     @Override public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction direction) { return true; }
 
     public static void serverTick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, VirtualHopperBlockEntity hopper) {
@@ -161,14 +232,14 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
             VirtualHopperBlockEntity destination = hopper.findTarget(serverLevel);
             if (destination != null && destination != hopper && (VirtualHopperConfig.INSTANCE.allowCrossDimension || destination.getLevel().dimension().equals(level.dimension())) && destination.getLevel() instanceof ServerLevel destLevel
                     && destLevel.hasChunkAt(destination.getBlockPos())) {
-                hopper.push(destination, Direction.UP);
+                hopper.push(destination, Direction.UP, true);
             }
         } else {
             Direction facing = state.getValue(VirtualHopperBlock.FACING);
             BlockPos output = pos.relative(facing);
             if (serverLevel.hasChunkAt(output)) {
                 BlockEntity be = serverLevel.getBlockEntity(output);
-                if (be instanceof Container container && be != hopper) hopper.push(container, facing.getOpposite());
+                if (be instanceof Container container && be != hopper) hopper.push(container, facing.getOpposite(), false);
             }
         }
     }
@@ -180,7 +251,7 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
                 for (int i = 0; i < source.getContainerSize(); i++) {
                     ItemStack stack = source.getItem(i);
                     if (stack.isEmpty() || source instanceof WorldlyContainer sided && !canExtract(sided,i,stack,Direction.DOWN)) continue;
-                    if (!canFit(stack, this, Direction.UP)) continue;
+                    if (!acceptsItem(stack) || !canFit(stack, this, Direction.UP)) continue;
                     ItemStack one = stack.copyWithCount(1);
                     if (insert(one, this, Direction.UP)) {
                         source.removeItem(i,1);
@@ -193,7 +264,7 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
         if (!VirtualHopperConfig.INSTANCE.collectDroppedItems) return;
         for (ItemEntity drop : level.getEntitiesOfClass(ItemEntity.class, new AABB(pos.getX(), pos.getY()+0.8, pos.getZ(), pos.getX()+1, pos.getY()+2, pos.getZ()+1))) {
             ItemStack stack = drop.getItem();
-            if (stack.isEmpty() || !canFit(stack,this,Direction.UP)) continue;
+            if (stack.isEmpty() || !acceptsItem(stack) || !canFit(stack,this,Direction.UP)) continue;
             ItemStack one = stack.copyWithCount(1);
             if (insert(one,this,Direction.UP)) {
                 stack.shrink(1);
@@ -202,10 +273,10 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
             break;
         }
     }
-    private void push(Container target, Direction entrySide) {
+    private void push(Container target, Direction entrySide, boolean remote) {
         for (int i=0;i<getContainerSize();i++) {
             ItemStack stack = getItem(i);
-            if (stack.isEmpty() || !canFit(stack,target,entrySide)) continue;
+            if (stack.isEmpty() || (remote && !canSend(stack)) || !canFit(stack,target,entrySide)) continue;
             ItemStack one = stack.copyWithCount(1);
             if (insert(one,target,entrySide)) { removeItem(i,1); setChanged(); }
             break;

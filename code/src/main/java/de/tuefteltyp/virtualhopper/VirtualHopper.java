@@ -1,6 +1,7 @@
 package de.tuefteltyp.virtualhopper;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
@@ -106,6 +107,35 @@ public final class VirtualHopper implements ModInitializer {
                                         p.sendSystemMessage(Component.translatable(ok ? "message.virtualhopper.saved" : "message.virtualhopper.name_taken"));
                                         return ok ? 1 : 0;
                                     }))))
+                        .then(Commands.literal("filter")
+                            .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .then(Commands.argument("direction", StringArgumentType.word())
+                                    .then(Commands.argument("setting", StringArgumentType.word())
+                                        .then(Commands.argument("value", StringArgumentType.word())
+                                            .executes(ctx -> {
+                                                ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                                VirtualHopperBlockEntity hopper = editable(player, BlockPosArgument.getBlockPos(ctx, "pos"));
+                                                if (hopper == null) return 0;
+                                                String direction = StringArgumentType.getString(ctx, "direction");
+                                                if (!direction.equals("pickup") && !direction.equals("send")) return 0;
+                                                boolean pickup = direction.equals("pickup");
+                                                String setting = StringArgumentType.getString(ctx, "setting");
+                                                String value = StringArgumentType.getString(ctx, "value");
+                                                boolean ok;
+                                                if (setting.equals("enabled")) {
+                                                    ok = value.equals("on") || value.equals("off");
+                                                    if (ok) hopper.setFilterEnabled(pickup, value.equals("on"));
+                                                } else if (setting.equals("mode")) {
+                                                    ok = value.equals("whitelist") || value.equals("blacklist");
+                                                    if (ok) hopper.setFilterBlacklist(pickup, value.equals("blacklist"));
+                                                } else if (setting.matches("slot[1-9]")) {
+                                                    int slot = setting.charAt(4) - '1';
+                                                    ok = hopper.setFilterItem(pickup, slot, value.equals("none") ? "" : value);
+                                                } else ok = false;
+                                                player.sendSystemMessage(Component.translatable(
+                                                        ok ? "message.virtualhopper.saved" : "message.virtualhopper.filter.invalid"));
+                                                return ok ? 1 : 0;
+                                            }))))))
                         .then(Commands.literal("target")
                             .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                 .then(Commands.argument("name", StringArgumentType.word())

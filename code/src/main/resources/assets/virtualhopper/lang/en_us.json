@@ -42,5 +42,21 @@
   "screen.virtualhopper.general.saved": "Saved and effective immediately.",
   "screen.virtualhopper.general.failed": "Could not save (see log).",
   "screen.virtualhopper.general.invalid": "Invalid: enter 1 through 1200.",
-  "screen.virtualhopper.general.remote": "Server settings must be changed on the server."
+  "screen.virtualhopper.general.remote": "Server settings must be changed on the server.",
+  "screen.virtualhopper.filter.open": "Item filters",
+  "screen.virtualhopper.filter.title": "Virtual Hopper - Item filters",
+  "screen.virtualhopper.filter.pickup": "Input filter",
+  "screen.virtualhopper.filter.send": "Remote output filter",
+  "screen.virtualhopper.filter.enable_on": "Filter: ON",
+  "screen.virtualhopper.filter.enable_off": "Filter: OFF",
+  "screen.virtualhopper.filter.whitelist": "Whitelist",
+  "screen.virtualhopper.filter.blacklist": "Blacklist",
+  "screen.virtualhopper.filter.help": "Hold an item in your main hand, then click a slot.",
+  "screen.virtualhopper.filter.clear": "Clear selected slot",
+  "screen.virtualhopper.filter.back": "Back",
+  "screen.virtualhopper.filter.empty": "Empty",
+  "screen.virtualhopper.filter.noitem": "Hold an item in the hotbar first.",
+  "screen.virtualhopper.filter.saved": "Filter change sent to server.",
+  "screen.virtualhopper.filter.selected": "Selected slot:",
+  "message.virtualhopper.filter.invalid": "Invalid filter value or item ID."
 }
