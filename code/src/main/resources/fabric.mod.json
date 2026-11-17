@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "virtualhopper",
+  "version": "${version}",
+  "name": "Virtual Hopper",
+  "description": "Long-distance virtual hoppers with globally unique names and configurable crafting recipe.",
+  "authors": [
+    "TueftelTyp"
+  ],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "de.tuefteltyp.virtualhopper.VirtualHopper"
+    ],
+    "client": [
+      "de.tuefteltyp.virtualhopper.client.VirtualHopperClient"
+    ],
+    "modmenu": [
+      "de.tuefteltyp.virtualhopper.client.VirtualHopperModMenu"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  },
+  "icon": "assets/virtualhopper/icon.png",
+  "suggests": {
+    "modmenu": "*"
+  }
+}

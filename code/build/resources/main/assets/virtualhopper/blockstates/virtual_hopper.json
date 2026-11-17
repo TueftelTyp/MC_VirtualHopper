@@ -1,0 +1,7 @@
+{"variants":{
+ "facing=down":{"model":"virtualhopper:block/virtual_hopper"},
+ "facing=north":{"model":"virtualhopper:block/virtual_hopper_side","y":0},
+ "facing=east":{"model":"virtualhopper:block/virtual_hopper_side","y":90},
+ "facing=south":{"model":"virtualhopper:block/virtual_hopper_side","y":180},
+ "facing=west":{"model":"virtualhopper:block/virtual_hopper_side","y":270}
+}}

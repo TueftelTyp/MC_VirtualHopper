@@ -1,0 +1,1 @@
+{"parent":"minecraft:block/hopper","textures":{"particle":"virtualhopper:block/hopper_top","top":"virtualhopper:block/hopper_top","side":"virtualhopper:block/hopper_outside","inside":"virtualhopper:block/hopper_inside"}}
