@@ -62,6 +62,10 @@ public final class VirtualHopper implements ModInitializer {
         if (blockEntity instanceof VirtualHopperBlockEntity hopper && name.equals(hopper.getHopperName())) return hopper;
         return null; // Never discard a reservation merely because a chunk is unloaded.
     }
+    /** Returns a reserved endpoint even if the destination chunk is not currently loaded. */
+    public static Endpoint findReservedEndpoint(String name) {
+        return ENDPOINTS.get(name);
+    }
     public static boolean claim(VirtualHopperBlockEntity hopper, String name) {
         return HopperNameRegistry.rename(hopper, name);
     }
@@ -122,11 +126,13 @@ public final class VirtualHopper implements ModInitializer {
                                         if (target.equals("none")) {
                                             hopper.setTargetName("");
                                         } else {
-                                            VirtualHopperBlockEntity destination = resolve(((ServerLevel) p.level()).getServer(), target);
-                                            if (destination == null) {
+                                            // Look up the world-wide reservation, not only loaded block entities.
+                                            // A destination in another dimension is often unloaded when editing this hopper.
+                                            Endpoint endpoint = findReservedEndpoint(target);
+                                            if (endpoint == null) {
                                                 p.sendSystemMessage(Component.translatable("message.virtualhopper.unknown")); return 0;
                                             }
-                                            hopper.setTarget(destination);
+                                            hopper.setTargetEndpoint(target, endpoint);
                                         }
                                         p.sendSystemMessage(Component.translatable("message.virtualhopper.saved"));
                                         return 1;

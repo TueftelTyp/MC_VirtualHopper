@@ -1,3 +1,7 @@
+# VirtualHopper v1.11
+
+Cross-dimensional target fix: destinations are resolved from the persistent name registry even if the target chunk is unloaded. When items are waiting, the mod loads the destination chunk to perform the transfer. This may add server load on large networks; chunks are not kept permanently forced-loaded. Existing names and links are preserved. Back up your world before upgrading.
+
 # VirtualHopper v1.10 (Minecraft 26.3 Fabric)
 
 Author: TueftelTyp

@@ -46,6 +46,7 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
     public String getTargetName() { return targetName; }
     public void setHopperName(String name) { hopperName = name; setChanged(); }
     public void setTargetName(String name) {
+        if (!name.equals(targetName)) clearTargetLocation();
         targetName = name;
         if (name.isBlank()) clearTargetLocation();
         setChanged();
@@ -58,6 +59,16 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
         targetLocationKnown = true;
         setChanged();
     }
+    /** Save the exact position and dimension without requiring the target chunk to be loaded. */
+    public void setTargetEndpoint(String name, VirtualHopper.Endpoint endpoint) {
+        if (name == null || name.isBlank() || endpoint == null || level == null) return;
+        if (endpoint.dimension().equals(level.dimension()) && endpoint.pos().equals(worldPosition)) return;
+        targetName = name;
+        targetDimension = endpoint.dimension().identifier().toString();
+        targetPosition = endpoint.pos().asLong();
+        targetLocationKnown = true;
+        setChanged();
+    }
     private void clearTargetLocation() {
         targetDimension = "";
         targetPosition = 0L;
@@ -65,20 +76,40 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
     }
     public VirtualHopperBlockEntity findTarget(ServerLevel current) {
         if (targetName.isBlank()) return null;
-        // Old worlds: resolve a name once, then persist the stable address.
-        if (!targetLocationKnown) {
-            VirtualHopperBlockEntity previous = VirtualHopper.resolve(current.getServer(), targetName);
-            if (previous != null) setTarget(previous);
-            else return null;
+        // Registry is authoritative: it works across dimensions and unloaded chunks,
+        // and lets us follow a target that was renamed/re-registered before this source tick.
+        VirtualHopper.Endpoint endpoint = VirtualHopper.findReservedEndpoint(targetName);
+        if (endpoint == null) return null;
+        String dimension = endpoint.dimension().identifier().toString();
+        if (!targetLocationKnown || !dimension.equals(targetDimension)
+                || endpoint.pos().asLong() != targetPosition) {
+            setTargetEndpoint(targetName, endpoint);
         }
-        final Identifier dimensionId;
-        try { dimensionId = Identifier.parse(targetDimension); }
-        catch (IllegalArgumentException ex) { return null; }
-        ServerLevel targetLevel = current.getServer().getLevel(ResourceKey.create(Registries.DIMENSION, dimensionId));
-        if (targetLevel == null || !targetLevel.hasChunkAt(BlockPos.of(targetPosition))) return null;
-        if (targetLevel.getBlockEntity(BlockPos.of(targetPosition)) instanceof VirtualHopperBlockEntity target
+        ServerLevel targetLevel = current.getServer().getLevel(endpoint.dimension());
+        if (targetLevel == null) return null;
+        if (!VirtualHopperConfig.INSTANCE.allowCrossDimension
+                && !endpoint.dimension().equals(current.dimension())) return null;
+        if (endpoint.dimension().equals(current.dimension()) && endpoint.pos().equals(worldPosition)) return null;
+        // A remote chunk may be unloaded, especially when sending from Nether to Overworld.
+        // Load it only while there is an item actually waiting to be sent. This avoids
+        // loading remote chunks for idle hoppers and never discards queued items on failure.
+        if (!targetLevel.hasChunkAt(endpoint.pos())) {
+            if (!hasItemsToSend()) return null;
+            try {
+                targetLevel.getChunkAt(endpoint.pos());
+            } catch (RuntimeException loadFailure) {
+                System.err.println("[VirtualHopper] Unable to load destination chunk "
+                        + endpoint.dimension().identifier() + " " + endpoint.pos() + ": " + loadFailure);
+                return null;
+            }
+        }
+        if (targetLevel.getBlockEntity(endpoint.pos()) instanceof VirtualHopperBlockEntity target
                 && targetName.equals(target.getHopperName())) return target;
         return null;
+    }
+    private boolean hasItemsToSend() {
+        for (ItemStack stack : items) if (!stack.isEmpty()) return true;
+        return false;
     }
     @Override public void setChanged() {
         super.setChanged();

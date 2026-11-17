@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "virtualhopper",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "name": "Virtual Hopper",
   "description": "Long-distance virtual hoppers with globally unique names and configurable crafting recipe.",
   "authors": [
