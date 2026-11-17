@@ -10,10 +10,11 @@ Virtual Hopper is a Fabric mod for **Minecraft Java Edition 26.3** that adds a n
 **Platform:** Fabric  
 **Languages:** English and German
 
-<!-- Optional: add your own screenshot URLs below.
-![Virtual Hopper in-game](YOUR_IMAGE_URL)
-![Virtual Hopper settings](YOUR_IMAGE_URL)
--->
+<div style="display: flex; gap: 10px;">
+<img src="/img/defaultrecipe.png" width="30%" style="display:block; margin:auto;">
+<img src="/img/hoppers.png" width="30%" style="display:block; margin:auto;">
+<img src="/img/connect.png" width="30%" style="display:block; margin:auto;">
+</div>
 
 ## Features
 
