@@ -5,7 +5,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.HopperScreen;
 import net.minecraft.core.BlockPos;
@@ -23,10 +22,6 @@ public final class VirtualHopperClient implements ClientModInitializer {
                 return InteractionResult.PASS;
             }
             lastInteractedHopper = hit.getBlockPos().immutable();
-            if (player.isShiftKeyDown()) {
-                Minecraft.getInstance().gui.setScreen(new VirtualHopperScreen(lastInteractedHopper));
-                return InteractionResult.SUCCESS;
-            }
             return InteractionResult.PASS;
         });
 

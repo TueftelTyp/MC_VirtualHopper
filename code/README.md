@@ -60,8 +60,12 @@ Requires access to Fabric, Mojang and Terraformers Maven to download dependencie
 
 ## v1.9 UI cleanup (retained)
 
-Removed the redundant "Konfiguration" toggle button from the stand-alone hopper settings screen. Name, destination, and action buttons remain visible. The settings entry point in the regular hopper inventory and shift-right-click shortcut remain unchanged. No transfer or storage logic was changed.
+Removed the redundant "Konfiguration" toggle button from the stand-alone hopper settings screen. Name, destination, and action buttons remain visible. The settings entry point in the regular hopper inventory remains available. The shift-right-click shortcut has been removed in v1.13. No transfer or storage logic was changed.
 
 ## v1.12 visual adjustment
 
 Reduced Virtual Hopper item model size in first-person, third-person and when dropped on the ground. Also adjusted item frame and inventory presentation. Block appearance and gameplay are unchanged.
+
+## v1.13 changes
+
+The Shift + right-click configuration shortcut was removed. Use the Settings button in the Virtual Hopper inventory instead. Normal inventory shift-click item transfers are unaffected.

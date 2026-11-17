@@ -1,2 +1,2 @@
 pluginManagement { repositories { maven { url = 'https://maven.fabricmc.net/' }; gradlePluginPortal(); mavenCentral() } }
-rootProject.name = 'VirtualHopper_v1.12'
+rootProject.name = 'VirtualHopper_v1.13'

@@ -48,7 +48,6 @@ public final class VirtualHopperBlock extends BaseEntityBlock {
         return level.isClientSide() ? null : createTickerHelper(type, VirtualHopper.BLOCK_ENTITY, VirtualHopperBlockEntity::serverTick);
     }
     @Override protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (player.isShiftKeyDown()) return InteractionResult.SUCCESS;
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof VirtualHopperBlockEntity hopper) player.openMenu(hopper);
         return InteractionResult.SUCCESS;
     }
