@@ -1,4 +1,4 @@
-# VirtualHopper v1.20
+# VirtualHopper v1.21
 
 Cross-dimensional target fix: destinations are resolved from the persistent name registry even if the target chunk is unloaded. When items are waiting, the mod loads the destination chunk to perform the transfer. This may add server load on large networks; chunks are not kept permanently forced-loaded. Existing names and links are preserved. Back up your world before upgrading.
 
@@ -102,10 +102,14 @@ Changes require a server with the same mod version; untrusted target names are v
 
 All nine targets are configured from **Manage destinations**. Select a numbered slot (1–9), enter an existing unique hopper name, and save. The main settings screen no longer has a competing single-target field. Set Round Robin, Priority, or Balanced mode and use **Check destination status** to inspect the server-side registrations in chat. Each slot retains its individual filter. Previously configured single targets remain in slot 1.
 
-## v1.20: balanced delivery fix
+## v1.21: balanced delivery fix
 
 Balanced mode now uses the number of **successfully transferred items** per destination rather than the current number of items in each destination's hopper inventory. A destination emptying into a chest or machine therefore no longer monopolizes the supply. Ties rotate using a persisted next-target cursor, and full/unreachable/filtered-out destinations are skipped. Existing destinations and filters remain compatible.
 
 The server command ` /virtualhopper targets <x> <y> <z> ` now reports the count of successful deliveries per destination, so you can verify the balance while testing. Counts are per source hopper and persist across world restarts. Changing an individual target resets its count. Round robin remains the clearest choice for strict alternation among reachable recipients.
 
 **Note:** If destinations have different input filters or cannot accept particular items, an equal distribution of those items is not possible. The algorithm counts only successful transfers. This version is not validated by a full Java 25/Fabric build or a Minecraft runtime test.
+
+## v1.21 inventory title
+
+Opening a Virtual Hopper now shows its unique name directly in the inventory title (for example, `Virtual Hopper – k2`). The name is display-only here and can still be changed only in the settings screen. The settings button remains available in the inventory.

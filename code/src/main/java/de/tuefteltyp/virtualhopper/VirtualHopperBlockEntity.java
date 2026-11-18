@@ -254,7 +254,13 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
     @Override public int getContainerSize() { return 5; }
     @Override protected NonNullList<ItemStack> getItems() { return items; }
     @Override protected void setItems(NonNullList<ItemStack> stacks) { items = stacks; }
-    @Override protected Component getDefaultName() { return Component.translatable("container.virtualhopper.virtual_hopper"); }
+    @Override protected Component getDefaultName() {
+        // The server sends the stored name as the inventory window title.
+        // Editing the name remains exclusive to the settings screen.
+        return hopperName.isBlank()
+                ? Component.translatable("container.virtualhopper.virtual_hopper")
+                : Component.translatable("container.virtualhopper.named", hopperName);
+    }
     @Override protected AbstractContainerMenu createMenu(int id, Inventory inventory) { return new HopperMenu(id, inventory, this); }
     @Override protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);

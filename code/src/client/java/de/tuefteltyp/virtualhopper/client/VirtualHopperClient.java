@@ -27,7 +27,11 @@ public final class VirtualHopperClient implements ClientModInitializer {
 
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
             if (!(screen instanceof HopperScreen) || lastInteractedHopper == null || client.level == null) return;
-            if (!screen.getTitle().getString().equals(Component.translatable("container.virtualhopper.virtual_hopper").getString())) return;
+            // The title now also contains the hopper's unique name. Accept both
+            // the legacy unnamed title and the new translated, named title.
+            String title = screen.getTitle().getString();
+            String baseTitle = Component.translatable("container.virtualhopper.virtual_hopper").getString();
+            if (!title.equals(baseTitle) && !title.startsWith(baseTitle + " – ")) return;
             BlockPos pos = lastInteractedHopper;
             if (!client.level.getBlockState(pos).is(VirtualHopper.BLOCK)) return;
             // On the side of the vanilla hopper window: never covers a slot.
