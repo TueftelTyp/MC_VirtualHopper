@@ -1,4 +1,4 @@
-# VirtualHopper v1.14
+# VirtualHopper v1.20
 
 Cross-dimensional target fix: destinations are resolved from the persistent name registry even if the target chunk is unloaded. When items are waiting, the mod loads the destination chunk to perform the transfer. This may add server load on large networks; chunks are not kept permanently forced-loaded. Existing names and links are preserved. Back up your world before upgrading.
 
@@ -66,11 +66,11 @@ Removed the redundant "Konfiguration" toggle button from the stand-alone hopper 
 
 Reduced Virtual Hopper item model size in first-person, third-person and when dropped on the ground. Also adjusted item frame and inventory presentation. Block appearance and gameplay are unchanged.
 
-## v1.14 changes
+## v1.18 changes
 
 The Shift + right-click configuration shortcut was removed. Use the Settings button in the Virtual Hopper inventory instead. Normal inventory shift-click item transfers are unaffected.
 
-## Independent item filters (v1.14)
+## Independent item filters (v1.18)
 
 Use **Settings → Item filters** to configure two independent sets of nine ghost templates:
 
@@ -82,3 +82,30 @@ Each filter may be disabled, whitelisted, or blacklisted. A whitelist with no en
 To configure the nine ghost template buttons, **hold an item in your main hand and click a filter slot**. Nothing is consumed. Click an empty hand to select a slot, then use **Clear selected slot** to remove its template. Filter settings are saved per hopper in the world and synchronized to nearby clients. Updating an already-opened GUI from another player's changes requires reopening it.
 
 The new server command is `/virtualhopper filter <x> <y> <z> <pickup|send> <enabled|mode|slot1..slot9> <on|off|whitelist|blacklist|item_id|none>`; the server validates position, distance, item identifiers, and values.
+
+## Item selection (v1.18)
+
+Click any filter slot to open a searchable item picker. The picker lists every registered item (including modded items), supports localized names and registry IDs, and shows the actual icons. It only saves the selected item ID; no items are consumed.
+
+## Multiple targets (v1.18)
+
+Open **Multiple targets** from the hopper settings window. Assign up to 9 uniquely named Virtual Hopper destinations. Use **Round robin**, **First available**, or **Balance by inventory fill**. Each destination also has an optional independent 9-item whitelist/blacklist filter, configured from the built-in item picker. The existing pickup and send filters are applied first. Targets in unloaded chunks can be resolved from the persistent name registry. v1.18 single-target connections migrate into target slot 1 automatically. Filter slots are templates, not real items.
+
+Changes require a server with the same mod version; untrusted target names are validated by the server.
+
+
+## v1.18 fixes
+- Item IDs containing a namespace colon (e.g. `minecraft:coal`) are accepted by the filter commands. Server-side item validation remains enabled.
+- Main hopper settings buttons are placed in a compact two-column layout to avoid clipping at normal GUI scale.
+
+## Destination management (v1.18)
+
+All nine targets are configured from **Manage destinations**. Select a numbered slot (1–9), enter an existing unique hopper name, and save. The main settings screen no longer has a competing single-target field. Set Round Robin, Priority, or Balanced mode and use **Check destination status** to inspect the server-side registrations in chat. Each slot retains its individual filter. Previously configured single targets remain in slot 1.
+
+## v1.20: balanced delivery fix
+
+Balanced mode now uses the number of **successfully transferred items** per destination rather than the current number of items in each destination's hopper inventory. A destination emptying into a chest or machine therefore no longer monopolizes the supply. Ties rotate using a persisted next-target cursor, and full/unreachable/filtered-out destinations are skipped. Existing destinations and filters remain compatible.
+
+The server command ` /virtualhopper targets <x> <y> <z> ` now reports the count of successful deliveries per destination, so you can verify the balance while testing. Counts are per source hopper and persist across world restarts. Changing an individual target resets its count. Round robin remains the clearest choice for strict alternation among reachable recipients.
+
+**Note:** If destinations have different input filters or cannot accept particular items, an equal distribution of those items is not possible. The algorithm counts only successful transfers. This version is not validated by a full Java 25/Fabric build or a Minecraft runtime test.

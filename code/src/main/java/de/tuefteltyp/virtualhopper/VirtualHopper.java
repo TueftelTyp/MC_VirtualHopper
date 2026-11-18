@@ -111,7 +111,7 @@ public final class VirtualHopper implements ModInitializer {
                             .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                 .then(Commands.argument("direction", StringArgumentType.word())
                                     .then(Commands.argument("setting", StringArgumentType.word())
-                                        .then(Commands.argument("value", StringArgumentType.word())
+                                        .then(Commands.argument("value", StringArgumentType.greedyString())
                                             .executes(ctx -> {
                                                 ServerPlayer player = ctx.getSource().getPlayerOrException();
                                                 VirtualHopperBlockEntity hopper = editable(player, BlockPosArgument.getBlockPos(ctx, "pos"));
@@ -136,6 +136,89 @@ public final class VirtualHopper implements ModInitializer {
                                                         ok ? "message.virtualhopper.saved" : "message.virtualhopper.filter.invalid"));
                                                 return ok ? 1 : 0;
                                             }))))))
+                        .then(Commands.literal("distribution")
+                            .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .then(Commands.argument("mode", StringArgumentType.word())
+                                    .executes(ctx -> {
+                                        ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                        VirtualHopperBlockEntity hopper = editable(player, BlockPosArgument.getBlockPos(ctx, "pos"));
+                                        if (hopper == null) return 0;
+                                        String mode = StringArgumentType.getString(ctx, "mode");
+                                        int index = switch (mode) { case "round_robin" -> 0; case "priority" -> 1; case "balanced" -> 2; default -> -1; };
+                                        if (index < 0) return 0;
+                                        hopper.setDistributionMode(index);
+                                        player.sendSystemMessage(Component.translatable("message.virtualhopper.saved"));
+                                        return 1;
+                                    }))))
+                        .then(Commands.literal("targets")
+                            .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .executes(ctx -> {
+                                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                    VirtualHopperBlockEntity hopper = editable(player, BlockPosArgument.getBlockPos(ctx, "pos"));
+                                    if (hopper == null) return 0;
+                                    int mode = hopper.getDistributionMode();
+                                    player.sendSystemMessage(Component.translatable("message.virtualhopper.targets.header",
+                                            hopper.getHopperName(), Component.translatable("screen.virtualhopper.targets.mode." + mode)));
+                                    for (int i = 0; i < 9; i++) {
+                                        String target = hopper.getTargetName(i);
+                                        if (target.isBlank()) continue;
+                                        Endpoint point = findReservedEndpoint(target);
+                                        Component state;
+                                        if (point == null) {
+                                            state = Component.translatable("message.virtualhopper.targets.unregistered");
+                                        } else if (!VirtualHopperConfig.INSTANCE.allowCrossDimension
+                                                && !point.dimension().equals(player.level().dimension())) {
+                                            state = Component.translatable("message.virtualhopper.targets.dimension_disabled");
+                                        } else {
+                                            ServerLevel destLevel = ((ServerLevel) player.level()).getServer().getLevel(point.dimension());
+                                            boolean loaded = destLevel != null && destLevel.hasChunkAt(point.pos());
+                                            state = Component.translatable(loaded
+                                                    ? "message.virtualhopper.targets.loaded"
+                                                    : "message.virtualhopper.targets.unloaded");
+                                        }
+                                        player.sendSystemMessage(Component.translatable("message.virtualhopper.targets.row",
+                                                i+1, target, state, hopper.getSuccessfulDeliveries(i)));
+                                    }
+                                    return 1;
+                                })))
+                        .then(Commands.literal("targetslot")
+                            .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .then(Commands.argument("slot", IntegerArgumentType.integer(1, 9))
+                                    .then(Commands.argument("name", StringArgumentType.word())
+                                        .executes(ctx -> {
+                                            ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                            VirtualHopperBlockEntity hopper = editable(player, BlockPosArgument.getBlockPos(ctx, "pos"));
+                                            if (hopper == null) return 0;
+                                            int index = IntegerArgumentType.getInteger(ctx, "slot") - 1;
+                                            String name = StringArgumentType.getString(ctx, "name");
+                                            if (name.equals("none")) name = "";
+                                            Endpoint endpoint = name.isEmpty() ? null : findReservedEndpoint(name);
+                                            boolean ok = hopper.setTargetSlot(index, name, endpoint);
+                                            player.sendSystemMessage(Component.translatable(ok ? "message.virtualhopper.saved" : "message.virtualhopper.unknown"));
+                                            return ok ? 1 : 0;
+                                        })))))
+                        .then(Commands.literal("targetfilter")
+                            .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .then(Commands.argument("slot", IntegerArgumentType.integer(1, 9))
+                                    .then(Commands.argument("setting", StringArgumentType.word())
+                                        .then(Commands.argument("value", StringArgumentType.greedyString())
+                                            .executes(ctx -> {
+                                                ServerPlayer player = ctx.getSource().getPlayerOrException();
+                                                VirtualHopperBlockEntity hopper = editable(player, BlockPosArgument.getBlockPos(ctx, "pos"));
+                                                if (hopper == null) return 0;
+                                                int index = IntegerArgumentType.getInteger(ctx, "slot") - 1;
+                                                String setting = StringArgumentType.getString(ctx, "setting");
+                                                String value = StringArgumentType.getString(ctx, "value");
+                                                boolean ok = false;
+                                                if (setting.equals("enabled") && (value.equals("on") || value.equals("off")))
+                                                    ok = hopper.setDestinationFilterEnabled(index, value.equals("on"));
+                                                else if (setting.equals("mode") && (value.equals("whitelist") || value.equals("blacklist")))
+                                                    ok = hopper.setDestinationFilterBlacklist(index, value.equals("blacklist"));
+                                                else if (setting.matches("slot[1-9]"))
+                                                    ok = hopper.setDestinationFilterItem(index, setting.charAt(4) - '1', value.equals("none") ? "" : value);
+                                                player.sendSystemMessage(Component.translatable(ok ? "message.virtualhopper.saved" : "message.virtualhopper.filter.invalid"));
+                                                return ok ? 1 : 0;
+                                            }))))))
                         .then(Commands.literal("target")
                             .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                 .then(Commands.argument("name", StringArgumentType.word())
@@ -144,20 +227,11 @@ public final class VirtualHopper implements ModInitializer {
                                         VirtualHopperBlockEntity hopper = editable(p, BlockPosArgument.getBlockPos(ctx, "pos"));
                                         if (hopper == null) return 0;
                                         String target = StringArgumentType.getString(ctx, "name");
-                                        if (!target.equals("none") && target.equals(hopper.getHopperName())) return 0;
-                                        if (target.equals("none")) {
-                                            hopper.setTargetName("");
-                                        } else {
-                                            // Look up the world-wide reservation, not only loaded block entities.
-                                            // A destination in another dimension is often unloaded when editing this hopper.
-                                            Endpoint endpoint = findReservedEndpoint(target);
-                                            if (endpoint == null) {
-                                                p.sendSystemMessage(Component.translatable("message.virtualhopper.unknown")); return 0;
-                                            }
-                                            hopper.setTargetEndpoint(target, endpoint);
-                                        }
-                                        p.sendSystemMessage(Component.translatable("message.virtualhopper.saved"));
-                                        return 1;
+                                        String requested = target.equals("none") ? "" : target;
+                                        Endpoint endpoint = requested.isEmpty() ? null : findReservedEndpoint(requested);
+                                        boolean ok = hopper.setTargetSlot(0, requested, endpoint);
+                                        p.sendSystemMessage(Component.translatable(ok ? "message.virtualhopper.saved" : "message.virtualhopper.unknown"));
+                                        return ok ? 1 : 0;
                                     }))))
         ));
     }

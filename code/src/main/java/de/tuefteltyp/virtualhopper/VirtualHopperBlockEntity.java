@@ -47,6 +47,17 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
     private boolean sendFilterBlacklist = false;
     private final String[] pickupFilterItems = new String[9];
     private final String[] sendFilterItems = new String[9];
+    // Slot zero remains compatible with v1.15 TargetName/TargetDimension/TargetPosition.
+    private final String[] additionalTargets = new String[8];
+    private final boolean[] destinationFilterEnabled = new boolean[9];
+    private final boolean[] destinationFilterBlacklist = new boolean[9];
+    private final String[][] destinationFilterItems = new String[9][9];
+    // 0 round robin, 1 priority, 2 least-successfully-delivered.
+    // Inventory fill is NOT a fair delivery metric: a quickly draining destination
+    // would otherwise receive every item, starving other destinations.
+    private int distributionMode = 0;
+    private int nextTarget = 0;
+    private final long[] successfulDeliveries = new long[9];
     private int age = 0;
     private static final int[] ALL = {0,1,2,3,4};
 
@@ -59,6 +70,65 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
         targetName = name;
         if (name.isBlank()) clearTargetLocation();
         setChanged();
+    }
+    public String getTargetName(int slot) {
+        if (slot < 0 || slot >= 9) return "";
+        String name = slot == 0 ? targetName : additionalTargets[slot - 1];
+        return name == null ? "" : name;
+    }
+    public int getDistributionMode() { return distributionMode; }
+    public long getSuccessfulDeliveries(int slot) {
+        return slot >= 0 && slot < 9 ? successfulDeliveries[slot] : 0L;
+    }
+    public void setDistributionMode(int mode) {
+        if (mode >= 0 && mode <= 2) { distributionMode = mode; setChanged(); }
+    }
+    public boolean setTargetSlot(int slot, String name, VirtualHopper.Endpoint endpoint) {
+        if (slot < 0 || slot >= 9 || name == null || level == null) return false;
+        if (!name.isEmpty()) {
+            if (endpoint == null || endpoint.dimension().equals(level.dimension()) && endpoint.pos().equals(worldPosition)) return false;
+            for (int i = 0; i < 9; i++) if (i != slot && name.equals(getTargetName(i))) return false;
+        }
+        if (!name.equals(getTargetName(slot))) successfulDeliveries[slot] = 0L;
+        if (slot == 0) {
+            if (name.isEmpty()) setTargetName("");
+            else setTargetEndpoint(name, endpoint);
+        } else {
+            additionalTargets[slot - 1] = name;
+            setChanged();
+        }
+        return true;
+    }
+    public boolean isDestinationFilterEnabled(int index) { return index >= 0 && index < 9 && destinationFilterEnabled[index]; }
+    public boolean isDestinationFilterBlacklist(int index) { return index >= 0 && index < 9 && destinationFilterBlacklist[index]; }
+    public String getDestinationFilterItem(int index, int slot) {
+        if (index < 0 || index >= 9 || slot < 0 || slot >= 9) return "";
+        String id = destinationFilterItems[index][slot];
+        return id == null ? "" : id;
+    }
+    public boolean setDestinationFilterEnabled(int index, boolean enabled) {
+        if (index < 0 || index >= 9) return false;
+        destinationFilterEnabled[index] = enabled; setChanged(); return true;
+    }
+    public boolean setDestinationFilterBlacklist(int index, boolean blacklist) {
+        if (index < 0 || index >= 9) return false;
+        destinationFilterBlacklist[index] = blacklist; setChanged(); return true;
+    }
+    public boolean setDestinationFilterItem(int index, int slot, String id) {
+        if (index < 0 || index >= 9 || slot < 0 || slot >= 9 || id == null) return false;
+        if (!id.isEmpty()) {
+            try {
+                Identifier key = Identifier.parse(id);
+                if (BuiltInRegistries.ITEM.getOptional(key).isEmpty() || key.toString().equals("minecraft:air")) return false;
+            } catch (RuntimeException ex) { return false; }
+        }
+        destinationFilterItems[index][slot] = id;
+        setChanged(); return true;
+    }
+    private boolean passesDestinationFilter(ItemStack stack, int targetIndex) {
+        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        return ItemFilterRules.allows(id, destinationFilterEnabled[targetIndex],
+                destinationFilterBlacklist[targetIndex], destinationFilterItems[targetIndex]);
     }
     public void setTarget(VirtualHopperBlockEntity destination) {
         if (destination.getLevel() == null || destination == this) return;
@@ -84,14 +154,18 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
         targetLocationKnown = false;
     }
     public VirtualHopperBlockEntity findTarget(ServerLevel current) {
-        if (targetName.isBlank()) return null;
+        return findTarget(current, 0);
+    }
+    public VirtualHopperBlockEntity findTarget(ServerLevel current, int targetSlot) {
+        String requestedName = getTargetName(targetSlot);
+        if (requestedName.isBlank()) return null;
         // Registry is authoritative: it works across dimensions and unloaded chunks,
         // and lets us follow a target that was renamed/re-registered before this source tick.
-        VirtualHopper.Endpoint endpoint = VirtualHopper.findReservedEndpoint(targetName);
+        VirtualHopper.Endpoint endpoint = VirtualHopper.findReservedEndpoint(requestedName);
         if (endpoint == null) return null;
         String dimension = endpoint.dimension().identifier().toString();
-        if (!targetLocationKnown || !dimension.equals(targetDimension)
-                || endpoint.pos().asLong() != targetPosition) {
+        if (targetSlot == 0 && (!targetLocationKnown || !dimension.equals(targetDimension)
+                || endpoint.pos().asLong() != targetPosition)) {
             setTargetEndpoint(targetName, endpoint);
         }
         ServerLevel targetLevel = current.getServer().getLevel(endpoint.dimension());
@@ -113,7 +187,7 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
             }
         }
         if (targetLevel.getBlockEntity(endpoint.pos()) instanceof VirtualHopperBlockEntity target
-                && targetName.equals(target.getHopperName())) return target;
+                && requestedName.equals(target.getHopperName())) return target;
         return null;
     }
     private boolean hasItemsToSend() {
@@ -191,6 +265,17 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
         targetDimension = input.getStringOr("TargetDimension", "");
         targetPosition = input.getLongOr("TargetPosition", 0L);
         targetLocationKnown = input.getBooleanOr("TargetLocationKnown", false);
+        distributionMode = Math.max(0, Math.min(2, input.getIntOr("DistributionMode", 0)));
+        nextTarget = Math.floorMod(input.getIntOr("NextTarget", 0), 9);
+        for (int t = 0; t < 9; t++)
+            successfulDeliveries[t] = Math.max(0L, input.getLongOr("SuccessfulDeliveries" + t, 0L));
+        for (int t = 0; t < 9; t++) {
+            if (t > 0) additionalTargets[t - 1] = input.getStringOr("AdditionalTarget" + t, "");
+            destinationFilterEnabled[t] = input.getBooleanOr("DestinationFilterEnabled" + t, false);
+            destinationFilterBlacklist[t] = input.getBooleanOr("DestinationFilterBlacklist" + t, false);
+            for (int j = 0; j < 9; j++)
+                destinationFilterItems[t][j] = input.getStringOr("DestinationFilter" + t + "Slot" + j, "");
+        }
         pickupFilterEnabled = input.getBooleanOr("PickupFilterEnabled", false);
         pickupFilterBlacklist = input.getBooleanOr("PickupFilterBlacklist", false);
         sendFilterEnabled = input.getBooleanOr("SendFilterEnabled", false);
@@ -208,6 +293,17 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
         output.putString("TargetDimension", targetDimension);
         output.putLong("TargetPosition", targetPosition);
         output.putBoolean("TargetLocationKnown", targetLocationKnown);
+        output.putInt("DistributionMode", distributionMode);
+        output.putInt("NextTarget", nextTarget);
+        for (int t = 0; t < 9; t++)
+            output.putLong("SuccessfulDeliveries" + t, successfulDeliveries[t]);
+        for (int t = 0; t < 9; t++) {
+            if (t > 0) output.putString("AdditionalTarget" + t, getTargetName(t));
+            output.putBoolean("DestinationFilterEnabled" + t, destinationFilterEnabled[t]);
+            output.putBoolean("DestinationFilterBlacklist" + t, destinationFilterBlacklist[t]);
+            for (int j = 0; j < 9; j++)
+                output.putString("DestinationFilter" + t + "Slot" + j, getDestinationFilterItem(t, j));
+        }
         output.putBoolean("PickupFilterEnabled", pickupFilterEnabled);
         output.putBoolean("PickupFilterBlacklist", pickupFilterBlacklist);
         output.putBoolean("SendFilterEnabled", sendFilterEnabled);
@@ -228,21 +324,75 @@ public final class VirtualHopperBlockEntity extends RandomizableContainerBlockEn
         if (++hopper.age % VirtualHopperConfig.INSTANCE.transferIntervalTicks != 0) return;
         VirtualHopper.remember(hopper);
         hopper.pull(serverLevel, pos);
-        if (!hopper.targetName.isBlank()) {
-            VirtualHopperBlockEntity destination = hopper.findTarget(serverLevel);
-            if (destination != null && destination != hopper && (VirtualHopperConfig.INSTANCE.allowCrossDimension || destination.getLevel().dimension().equals(level.dimension())) && destination.getLevel() instanceof ServerLevel destLevel
-                    && destLevel.hasChunkAt(destination.getBlockPos())) {
-                hopper.push(destination, Direction.UP, true);
-            }
+        boolean hasAnyTarget = false;
+        for (int t = 0; t < 9; t++) if (!hopper.getTargetName(t).isBlank()) hasAnyTarget = true;
+        if (hasAnyTarget) {
+            hopper.distribute(serverLevel);
         } else {
             Direction facing = state.getValue(VirtualHopperBlock.FACING);
             BlockPos output = pos.relative(facing);
             if (serverLevel.hasChunkAt(output)) {
                 BlockEntity be = serverLevel.getBlockEntity(output);
-                if (be instanceof Container container && be != hopper) hopper.push(container, facing.getOpposite(), false);
+                if (be instanceof Container container && be != hopper)
+                    hopper.push(container, facing.getOpposite(), false);
             }
         }
     }
+    private void distribute(ServerLevel sourceLevel) {
+        // Deliver exactly one item per tick attempt. Choose only a destination that
+        // accepts this item and has space; never remove from source until insertion succeeds.
+        for (int sourceSlot = 0; sourceSlot < getContainerSize(); sourceSlot++) {
+            ItemStack stack = getItem(sourceSlot);
+            if (stack.isEmpty() || !canSend(stack)) continue;
+
+            int selectedSlot = -1;
+            long lowestDeliveries = Long.MAX_VALUE;
+            VirtualHopperBlockEntity selectedTarget = null;
+            for (int offset = 0; offset < 9; offset++) {
+                // Rotate ties in balanced mode as well as the round-robin order.
+                int index = distributionMode == 1 ? offset : (nextTarget + offset) % 9;
+                if (getTargetName(index).isBlank() || !passesDestinationFilter(stack, index)) continue;
+                VirtualHopperBlockEntity target = findTarget(sourceLevel, index);
+                if (target == null || target == this || !canFit(stack, target, Direction.UP)) continue;
+                if (distributionMode == 2) {
+                    long delivered = successfulDeliveries[index];
+                    if (selectedTarget == null || delivered < lowestDeliveries) {
+                        selectedSlot = index;
+                        selectedTarget = target;
+                        lowestDeliveries = delivered;
+                    }
+                } else {
+                    selectedSlot = index;
+                    selectedTarget = target;
+                    break;
+                }
+            }
+            if (selectedTarget == null) continue;
+            if (insert(stack.copyWithCount(1), selectedTarget, Direction.UP)) {
+                removeItem(sourceSlot, 1);
+                if (distributionMode != 1) nextTarget = (selectedSlot + 1) % 9;
+                // Count successful deliveries, not inventory contents. Destinations
+                // may immediately output items into machines or other inventories.
+                successfulDeliveries[selectedSlot]++;
+                // Normalize occasionally to avoid overflow in long-running worlds.
+                if (successfulDeliveries[selectedSlot] >= 1_000_000_000L) {
+                    long minimum = Long.MAX_VALUE;
+                    for (int i = 0; i < 9; i++) {
+                        if (!getTargetName(i).isBlank()) minimum = Math.min(minimum, successfulDeliveries[i]);
+                    }
+                    if (minimum > 0 && minimum != Long.MAX_VALUE) {
+                        for (int i = 0; i < 9; i++)
+                            successfulDeliveries[i] = Math.max(0L, successfulDeliveries[i] - minimum);
+                    } else {
+                        for (int i = 0; i < 9; i++) successfulDeliveries[i] /= 2;
+                    }
+                }
+                setChanged();
+                return;
+            }
+        }
+    }
+
     private void pull(ServerLevel level, BlockPos pos) {
         BlockPos above = pos.above();
         if (level.hasChunkAt(above)) {

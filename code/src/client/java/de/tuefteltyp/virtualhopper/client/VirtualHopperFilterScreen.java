@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.Identifier;
 
 /** Two independent, nine-template filters. Template clicks copy the held item's ID;
  *  no items are taken from the inventory or consumed. All changes are verified server-side.
@@ -94,15 +95,17 @@ public final class VirtualHopperFilterScreen extends Screen {
 
     private void choose(int index) {
         selected = index;
-        ItemStack held = minecraft == null || minecraft.player == null
-                ? ItemStack.EMPTY : minecraft.player.getMainHandItem();
-        if (held.isEmpty()) {
-            statusKey = "screen.virtualhopper.filter.noitem";
-        } else {
-            String id = BuiltInRegistries.ITEM.getKey(held.getItem()).toString();
-            templates[page][index] = id;
-            send("slot" + (index + 1), id);
-        }
+        if (minecraft != null)
+            minecraft.gui.setScreen(new VirtualHopperItemPickerScreen(this, page, index));
+    }
+
+    /** Called by the picker only after the player selects an actual registered item. */
+    void applySelection(int filterPage, int slot, String id) {
+        if (filterPage < 0 || filterPage > 1 || slot < 0 || slot >= 9) return;
+        templates[filterPage][slot] = id;
+        page = filterPage;
+        selected = slot;
+        send("slot" + (slot + 1), id);
         refreshButtons();
     }
 
@@ -114,9 +117,7 @@ public final class VirtualHopperFilterScreen extends Screen {
                 ? "screen.virtualhopper.filter.blacklist" : "screen.virtualhopper.filter.whitelist"));
         for (int i = 0; i < 9; i++) {
             String id = templates[page][i];
-            String shortName = id.isBlank() ? "+" : id.substring(id.indexOf(':') + 1);
-            if (shortName.length() > 3) shortName = shortName.substring(0, 3);
-            templateButtons[i].setMessage(Component.literal(shortName));
+            templateButtons[i].setMessage(Component.literal(id.isBlank() ? "+" : ""));
         }
     }
 
@@ -138,5 +139,15 @@ public final class VirtualHopperFilterScreen extends Screen {
         if (!statusKey.isBlank()) graphics.text(font, Component.translatable(statusKey),
                 x + 6, y + 187, 0xFFAFE8CE, false);
         super.extractRenderState(graphics, mouseX, mouseY, delta);
+        for (int i = 0; i < 9; i++) {
+            String itemId = templates[page][i];
+            if (itemId.isBlank()) continue;
+            Identifier parsed = Identifier.tryParse(itemId);
+            if (parsed == null) continue;
+            var item = BuiltInRegistries.ITEM.getOptional(parsed);
+            if (item.isEmpty()) continue;
+            ItemStack stack = new ItemStack(item.get());
+            graphics.item(stack, x + 13 + i * 33, y + 98);
+        }
     }
 }

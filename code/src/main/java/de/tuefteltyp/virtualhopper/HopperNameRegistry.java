@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.LevelResource;
 
@@ -104,10 +105,31 @@ public final class HopperNameRegistry {
         throw new IllegalStateException("All 100000 five-digit VirtualHopper names are in use");
     }
 
+    /**
+     * Release an obsolete name only when its old chunk is already loaded and the
+     * corresponding block entity is demonstrably missing or different.
+     * Never force-load a chunk: an unloaded hopper must retain its reservation.
+     */
+    private static void releaseStaleReservation(MinecraftServer server, String name) {
+        VirtualHopper.Endpoint reserved = VirtualHopper.ENDPOINTS.get(name);
+        if (reserved == null) return;
+        ServerLevel oldLevel = server.getLevel(reserved.dimension());
+        if (oldLevel == null || !oldLevel.hasChunkAt(reserved.pos())) return;
+
+        BlockEntity existing = oldLevel.getBlockEntity(reserved.pos());
+        if (existing instanceof VirtualHopperBlockEntity other
+                && name.equals(other.getHopperName())) return;
+
+        if (VirtualHopper.ENDPOINTS.remove(name, reserved)) save();
+    }
+
     public static synchronized boolean rename(VirtualHopperBlockEntity hopper, String newName) {
         if (hopper.getLevel() == null || !(hopper.getLevel() instanceof ServerLevel level)
                 || newName == null || !newName.matches("[a-zA-Z0-9_-]{1,32}")) return false;
         registerIfNeeded(hopper, level);
+        // Abandoned reservations must not prevent reuse after a hopper is broken.
+        // This lookup is restricted to an already loaded chunk for safety.
+        releaseStaleReservation(level.getServer(), newName);
         VirtualHopper.Endpoint point = new VirtualHopper.Endpoint(level.dimension(), hopper.getBlockPos().immutable());
         VirtualHopper.Endpoint current = VirtualHopper.ENDPOINTS.get(newName);
         if (current != null && !current.equals(point)) return false;
